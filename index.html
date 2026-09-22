@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI-Assisted Fitts' Law Experiment</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel2: #1f2937;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --accent: #38bdf8;
+      --accent2: #22c55e;
+      --danger: #ef4444;
+      --line: rgba(255,255,255,.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #0b1020, #111827 40%, #0f172a);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .wrap {
+      width: min(1180px, 94vw);
+      margin: 0 auto;
+      padding: 28px 0 60px;
+    }
+    header {
+      margin-bottom: 20px;
+    }
+    h1, h2, h3 { line-height: 1.25; }
+    h1 { margin-bottom: 8px; }
+    p { color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 18px;
+    }
+    .card {
+      background: rgba(17,24,39,.92);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.18);
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stat {
+      background: var(--panel2);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat .label {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .stat .value {
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 12px 0 14px;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 15px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: #06202d;
+    }
+    button.secondary {
+      background: #334155;
+      color: var(--text);
+    }
+    button.success {
+      background: var(--accent2);
+      color: #06230f;
+    }
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+    #experimentCanvas {
+      width: 100%;
+      aspect-ratio: 1000 / 650;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(56,189,248,.08), transparent 32%),
+        radial-gradient(circle at 80% 80%, rgba(34,197,94,.05), transparent 30%),
+        #08111f;
+      display: block;
+      cursor: crosshair;
+    }
+    .note {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 7px;
+      text-align: right;
+    }
+    th:first-child, td:first-child { text-align: center; }
+    th { color: #e2e8f0; }
+    .table-scroll {
+      max-height: 390px;
+      overflow: auto;
+      border-radius: 10px;
+    }
+    #analysisCanvas {
+      width: 100%;
+      aspect-ratio: 900 / 520;
+      border-radius: 12px;
+      background: #ffffff;
+      display: block;
+    }
+    code, .formula {
+      background: #0b1220;
+      padding: 3px 6px;
+      border-radius: 6px;
+      color: #dbeafe;
+    }
+    .report p { margin-top: 6px; }
+    .video-placeholder {
+      border: 1px dashed #64748b;
+      border-radius: 12px;
+      padding: 18px;
+      color: #94a3b8;
+      background: #0b1220;
+    }
+    .footer {
+      margin-top: 26px;
+      text-align: center;
+      color: #64748b;
+      font-size: 13px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>AI-Assisted Fitts' Law Experiment</h1>
+    <p>
+      Drone Target Selection Simulator — an HCI experiment for measuring the relationship
+      between target distance, target width, and movement time.
+    </p>
+  </header>
+
+  <section class="card report">
+    <h2>Scenario, Innovation, and Application</h2>
+    <h3>Scenario</h3>
+    <p>
+      This experiment simulates a drone-monitoring interface in which an operator must quickly
+      select detected targets on the screen. During real-time monitoring, targets may appear at
+      different distances and sizes, which can affect selection speed.
+    </p>
+
+    <h3>Innovation</h3>
+    <p>
+      The interface adds a target-lock guidance cue: each detected target is highlighted with a
+      pulsing visual ring and a directional guide line from the previous selection point. The cue
+      is designed to support rapid target acquisition without changing the target's actual clickable width.
+    </p>
+
+    <h3>Application</h3>
+    <p>
+      This design investigates pointing performance in interfaces such as drone control,
+      surveillance systems, and real-time monitoring dashboards, where operators may need to
+      select spatially distributed visual targets under time pressure.
+    </p>
+
+    <h3>Why this design?</h3>
+    <p>
+      Drone and monitoring interfaces often contain spatially distributed targets with different
+      apparent sizes. Fitts' Law provides a useful model for evaluating how target distance and
+      width affect selection time, while the guidance cue explores a practical interface aid for
+      time-sensitive pointing tasks.
+    </p>
+  </section>
+
+  <div class="grid" style="margin-top:18px;">
+    <section class="card">
+      <h2>Interactive Experiment</h2>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="label">Trial</div>
+          <div class="value" id="trialStat">0 / 27</div>
+        </div>
+        <div class="stat">
+          <div class="label">Distance A</div>
+          <div class="value" id="distanceStat">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Width W</div>
+          <div class="value" id="widthStat">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Movement Time</div>
+          <div class="value" id="mtStat">—</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn">Start Experiment</button>
+        <button id="resetBtn" class="secondary">Reset</button>
+        <button id="exportBtn" class="success" disabled>Export CSV</button>
+      </div>
+
+      <canvas id="experimentCanvas" width="1000" height="650"></canvas>
+
+      <p class="note">
+        Instructions: Click <b>Start Experiment</b>. Then click each highlighted target as quickly
+        and accurately as possible. After each successful click, the next target appears at a
+        systematically controlled distance and width.
+      </p>
+    </section>
+
+    <section class="card">
+      <h2>Trial Data</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Trial</th>
+              <th>A (px)</th>
+              <th>W (px)</th>
+              <th>ID (bits)</th>
+              <th>MT (ms)</th>
+            </tr>
+          </thead>
+          <tbody id="dataBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:18px;">
+    <h2>Empirical Analysis</h2>
+    <p>
+      The analysis uses the Shannon formulation:
+      <span class="formula">MT = a + b log₂(A/W + 1)</span>
+    </p>
+
+    <p id="formulaOutput">
+      Complete the experiment to calculate your empirical Fitts' Law model.
+    </p>
+
+    <canvas id="analysisCanvas" width="900" height="520"></canvas>
+
+    <p class="note">
+      The scatter plot uses Index of Difficulty (ID) on the x-axis and Movement Time (MT) on the y-axis.
+      The fitted line, equation, and R² are calculated automatically after the experiment.
+    </p>
+  </section>
+
+  <section class="card" style="margin-top:18px;">
+    <h2>Experiment Video</h2>
+    <div class="video-placeholder">
+      After recording your experiment, upload the video to YouTube and replace this box with an
+      embedded YouTube iframe. Example:<br><br>
+      <code>&lt;iframe src="https://www.youtube.com/embed/YOUR_VIDEO_ID" ...&gt;&lt;/iframe&gt;</code>
+    </div>
+  </section>
+
+  <div class="footer">
+    Human-Computer Interaction — Assignment 1, Part II
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('experimentCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const analysisCanvas = document.getElementById('analysisCanvas');
+  const actx = analysisCanvas.getContext('2d');
+
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const exportBtn = document.getElementById('exportBtn');
+
+  const trialStat = document.getElementById('trialStat');
+  const distanceStat = document.getElementById('distanceStat');
+  const widthStat = document.getElementById('widthStat');
+  const mtStat = document.getElementById('mtStat');
+  const dataBody = document.getElementById('dataBody');
+  const formulaOutput = document.getElementById('formulaOutput');
+
+  const distances = [160, 260, 360];
+  const widths = [30, 60, 90];
+  const repetitions = 3;
+
+  let conditions = [];
+  let data = [];
+  let running = false;
+  let currentTrial = 0;
+  let target = null;
+  let lastPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+  let trialStartTime = 0;
+  let animationFrame = null;
+  let pulsePhase = 0;
+
+  function shuffled(array) {
+    const a = [...array];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function buildConditions() {
+    const arr = [];
+    for (let r = 0; r < repetitions; r++) {
+      for (const A of distances) {
+        for (const W of widths) {
+          arr.push({ A, W });
+        }
+      }
+    }
+    return shuffled(arr);
+  }
+
+  function getValidTarget(A, W) {
+    const margin = W / 2 + 28;
+    for (let tries = 0; tries < 300; tries++) {
+      const angle = Math.random() * Math.PI * 2;
+      const x = lastPoint.x + A * Math.cos(angle);
+      const y = lastPoint.y + A * Math.sin(angle);
+
+      if (
+        x >= margin &&
+        x <= canvas.width - margin &&
+        y >= margin &&
+        y <= canvas.height - margin
+      ) {
+        return { x, y, A, W };
+      }
+    }
+
+    // Fallback: use a deterministic safe direction
+    const directions = [0, Math.PI, Math.PI/2, -Math.PI/2];
+    for (const angle of directions) {
+      const x = lastPoint.x + A * Math.cos(angle);
+      const y = lastPoint.y + A * Math.sin(angle);
+      if (
+        x >= margin &&
+        x <= canvas.width - margin &&
+        y >= margin &&
+        y <= canvas.height - margin
+      ) {
+        return { x, y, A, W };
+      }
+    }
+
+    // If still impossible, reset reference point to center and retry
+    lastPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+    return getValidTarget(A, W);
+  }
+
+  function drawBackground() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // subtle radar grid
+    ctx.save();
+    ctx.strokeStyle = 'rgba(148,163,184,.12)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= canvas.width; x += 100) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= canvas.height; y += 100) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+
+    // previous click marker
+    ctx.fillStyle = 'rgba(226,232,240,.9)';
+    ctx.beginPath();
+    ctx.arc(lastPoint.x, lastPoint.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (target) {
+      // directional guide line (innovation cue)
+      ctx.strokeStyle = 'rgba(56,189,248,.35)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.moveTo(lastPoint.x, lastPoint.y);
+      ctx.lineTo(target.x, target.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // target lock ring
+      const pulse = 8 + 4 * Math.sin(pulsePhase);
+      ctx.strokeStyle = 'rgba(56,189,248,.75)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, target.W / 2 + pulse, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // actual clickable target width = W
+      ctx.fillStyle = 'rgba(239,68,68,.95)';
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, target.W / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('TARGET', target.x, target.y);
+    }
+
+    ctx.restore();
+  }
+
+  function animate() {
+    pulsePhase += 0.08;
+    drawBackground();
+    animationFrame = requestAnimationFrame(animate);
+  }
+
+  function updateStats() {
+    trialStat.textContent = `${currentTrial} / ${conditions.length}`;
+    distanceStat.textContent = target ? `${target.A} px` : '—';
+    widthStat.textContent = target ? `${target.W} px` : '—';
+  }
+
+  function nextTrial() {
+    if (currentTrial >= conditions.length) {
+      finishExperiment();
+      return;
+    }
+
+    const c = conditions[currentTrial];
+    target = getValidTarget(c.A, c.W);
+    currentTrial += 1;
+    updateStats();
+
+    // Start timing when target appears.
+    trialStartTime = performance.now();
+  }
+
+  function startExperiment() {
+    conditions = buildConditions();
+    data = [];
+    currentTrial = 0;
+    running = true;
+    target = null;
+    lastPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+    mtStat.textContent = '—';
+    dataBody.innerHTML = '';
+    exportBtn.disabled = true;
+    startBtn.disabled = true;
+    formulaOutput.textContent = 'Experiment in progress...';
+    clearAnalysisPlot();
+
+    nextTrial();
+  }
+
+  function resetExperiment() {
+    running = false;
+    target = null;
+    conditions = [];
+    data = [];
+    currentTrial = 0;
+    lastPoint = { x: canvas.width / 2, y: canvas.height / 2 };
+    startBtn.disabled = false;
+    exportBtn.disabled = true;
+    trialStat.textContent = '0 / 27';
+    distanceStat.textContent = '—';
+    widthStat.textContent = '—';
+    mtStat.textContent = '—';
+    dataBody.innerHTML = '';
+    formulaOutput.textContent = "Complete the experiment to calculate your empirical Fitts' Law model.";
+    clearAnalysisPlot();
+  }
+
+  function finishExperiment() {
+    running = false;
+    target = null;
+    startBtn.disabled = false;
+    exportBtn.disabled = false;
+    distanceStat.textContent = 'Done';
+    widthStat.textContent = 'Done';
+    mtStat.textContent = 'Complete';
+
+    const result = linearRegression(data);
+    formulaOutput.innerHTML =
+      `<b>Custom Fitts' Law:</b> MT = ${result.a.toFixed(2)} + ${result.b.toFixed(2)} ID
+       &nbsp;&nbsp; | &nbsp;&nbsp;
+       <b>R² = ${result.r2.toFixed(4)}</b>`;
+
+    drawAnalysisPlot(result);
+  }
+
+  function addRow(row) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.trial}</td>
+      <td>${row.A.toFixed(2)}</td>
+      <td>${row.W.toFixed(2)}</td>
+      <td>${row.ID.toFixed(4)}</td>
+      <td>${row.MT.toFixed(2)}</td>
+    `;
+    dataBody.appendChild(tr);
+  }
+
+  canvas.addEventListener('click', (event) => {
+    if (!running || !target) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+
+    const dx = x - target.x;
+    const dy = y - target.y;
+    const d = Math.hypot(dx, dy);
+
+    if (d <= target.W / 2) {
+      const mt = performance.now() - trialStartTime;
+      const id = Math.log2(target.A / target.W + 1);
+
+      const row = {
+        trial: currentTrial,
+        A: target.A,
+        W: target.W,
+        ID: id,
+        MT: mt
+      };
+
+      data.push(row);
+      addRow(row);
+      mtStat.textContent = `${mt.toFixed(0)} ms`;
+
+      lastPoint = { x: target.x, y: target.y };
+      nextTrial();
+    }
+  });
+
+  function linearRegression(rows) {
+    const xs = rows.map(r => r.ID);
+    const ys = rows.map(r => r.MT);
+    const n = xs.length;
+
+    const meanX = xs.reduce((a, b) => a + b, 0) / n;
+    const meanY = ys.reduce((a, b) => a + b, 0) / n;
+
+    let num = 0;
+    let den = 0;
+
+    for (let i = 0; i < n; i++) {
+      num += (xs[i] - meanX) * (ys[i] - meanY);
+      den += (xs[i] - meanX) ** 2;
+    }
+
+    const b = num / den;
+    const a = meanY - b * meanX;
+
+    const preds = xs.map(x => a + b * x);
+    const ssRes = ys.reduce((s, y, i) => s + (y - preds[i]) ** 2, 0);
+    const ssTot = ys.reduce((s, y) => s + (y - meanY) ** 2, 0);
+    const r2 = 1 - ssRes / ssTot;
+
+    return { a, b, r2 };
+  }
+
+  function clearAnalysisPlot() {
+    actx.save();
+    actx.fillStyle = '#ffffff';
+    actx.fillRect(0, 0, analysisCanvas.width, analysisCanvas.height);
+    actx.fillStyle = '#334155';
+    actx.font = '18px Arial';
+    actx.textAlign = 'center';
+    actx.fillText('Complete the experiment to generate the scatter plot.', analysisCanvas.width/2, analysisCanvas.height/2);
+    actx.restore();
+  }
+
+  function drawAnalysisPlot(result) {
+    const W = analysisCanvas.width;
+    const H = analysisCanvas.height;
+    const pad = { left: 78, right: 30, top: 55, bottom: 70 };
+
+    const xs = data.map(r => r.ID);
+    const ys = data.map(r => r.MT);
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    const xPad = (maxX - minX) * 0.12 || 0.2;
+    const yPad = (maxY - minY) * 0.12 || 50;
+
+    const x0 = minX - xPad;
+    const x1 = maxX + xPad;
+    const y0 = Math.max(0, minY - yPad);
+    const y1 = maxY + yPad;
+
+    const sx = x => pad.left + (x - x0) / (x1 - x0) * (W - pad.left - pad.right);
+    const sy = y => H - pad.bottom - (y - y0) / (y1 - y0) * (H - pad.top - pad.bottom);
+
+    actx.clearRect(0, 0, W, H);
+    actx.fillStyle = '#ffffff';
+    actx.fillRect(0, 0, W, H);
+
+    // grid + ticks
+    actx.strokeStyle = '#e2e8f0';
+    actx.fillStyle = '#475569';
+    actx.font = '13px Arial';
+    actx.lineWidth = 1;
+
+    const tickCount = 5;
+
+    for (let i = 0; i <= tickCount; i++) {
+      const tx = x0 + (x1 - x0) * i / tickCount;
+      const px = sx(tx);
+
+      actx.beginPath();
+      actx.moveTo(px, pad.top);
+      actx.lineTo(px, H - pad.bottom);
+      actx.stroke();
+
+      actx.textAlign = 'center';
+      actx.fillText(tx.toFixed(2), px, H - pad.bottom + 24);
+    }
+
+    for (let i = 0; i <= tickCount; i++) {
+      const ty = y0 + (y1 - y0) * i / tickCount;
+      const py = sy(ty);
+
+      actx.beginPath();
+      actx.moveTo(pad.left, py);
+      actx.lineTo(W - pad.right, py);
+      actx.stroke();
+
+      actx.textAlign = 'right';
+      actx.fillText(ty.toFixed(0), pad.left - 10, py + 4);
+    }
+
+    // axes
+    actx.strokeStyle = '#334155';
+    actx.lineWidth = 1.5;
+    actx.beginPath();
+    actx.moveTo(pad.left, pad.top);
+    actx.lineTo(pad.left, H - pad.bottom);
+    actx.lineTo(W - pad.right, H - pad.bottom);
+    actx.stroke();
+
+    // scatter
+    actx.fillStyle = '#2563eb';
+    for (const r of data) {
+      actx.beginPath();
+      actx.arc(sx(r.ID), sy(r.MT), 5.5, 0, Math.PI * 2);
+      actx.fill();
+    }
+
+    // regression line
+    actx.strokeStyle = '#dc2626';
+    actx.lineWidth = 3;
+    actx.beginPath();
+    actx.moveTo(sx(x0), sy(result.a + result.b * x0));
+    actx.lineTo(sx(x1), sy(result.a + result.b * x1));
+    actx.stroke();
+
+    // title
+    actx.fillStyle = '#0f172a';
+    actx.font = 'bold 19px Arial';
+    actx.textAlign = 'center';
+    actx.fillText("Fitts' Law: Movement Time vs. Index of Difficulty", W / 2, 28);
+
+    // labels
+    actx.font = '15px Arial';
+    actx.fillText('Index of Difficulty (bits)', W / 2, H - 22);
+
+    actx.save();
+    actx.translate(22, H / 2);
+    actx.rotate(-Math.PI / 2);
+    actx.fillText('Movement Time (ms)', 0, 0);
+    actx.restore();
+
+    // equation
+    actx.textAlign = 'left';
+    actx.font = '14px Arial';
+    actx.fillStyle = '#0f172a';
+    actx.fillText(`MT = ${result.a.toFixed(2)} + ${result.b.toFixed(2)} ID`, pad.left + 14, pad.top + 22);
+    actx.fillText(`R² = ${result.r2.toFixed(4)}`, pad.left + 14, pad.top + 44);
+  }
+
+  function exportCSV() {
+    if (!data.length) return;
+
+    const header = ['Trial', 'A_pixels', 'W_pixels', 'ID_bits', 'MT_ms'];
+    const lines = [header.join(',')];
+
+    data.forEach(r => {
+      lines.push([
+        r.trial,
+        r.A.toFixed(2),
+        r.W.toFixed(2),
+        r.ID.toFixed(4),
+        r.MT.toFixed(2)
+      ].join(','));
+    });
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'fitts_law_part2_data.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  startBtn.addEventListener('click', startExperiment);
+  resetBtn.addEventListener('click', resetExperiment);
+  exportBtn.addEventListener('click', exportCSV);
+
+  clearAnalysisPlot();
+  animate();
+})();
+</script>
+</body>
+</html>
